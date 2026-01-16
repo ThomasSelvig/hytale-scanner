@@ -29,6 +29,7 @@ uv run python scanner.py --block-size 20 --port 5520
 ```
 
 **CLI Arguments:**
+
 - `--workers N`: Number of concurrent workers (default: 4)
 - `--concurrency N`: Concurrent scans per worker (default: 100)
 - `--block-size N`: CIDR block size in bits (default: 24 = /24 = 256 IPs)
@@ -58,3 +59,10 @@ uv run python main.py 192.0.2.1 5520
 - **scanner_core.py**: QUIC scanning logic
 - **main.py**: Single-IP scanner (reused by block scanner)
 - **config.py**: Configuration constants
+
+## TODO
+
+- [ ] figure out how to determine if a server has whitelist or a password
+  - 216.163.18.40, 212.132.73.225, 217.154.17.71 has password
+  - 129.151.214.169, 185.185.43.27 don't respond? peer closes
+  - 164.68.121.75 has a whitelist
