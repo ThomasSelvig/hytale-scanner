@@ -2,16 +2,6 @@ import ipaddress
 import logging
 
 
-class SocketSendFilter(logging.Filter):
-    """Filter to suppress noisy socket and connection warnings."""
-    def filter(self, record):
-        msg = record.getMessage()
-        return not any([
-            'socket.send() raised exception' in msg,
-            'Connection close sent' in msg,
-        ])
-
-
 def setup_logging(level: int = logging.INFO) -> None:
     """
     Setup structured logging for the scanner.
@@ -29,12 +19,9 @@ def setup_logging(level: int = logging.INFO) -> None:
     # Silence noisy third-party libraries
     # The aioquic library uses logger name "quic" (not "aioquic")
     logging.getLogger('quic').setLevel(logging.ERROR)
-    logging.getLogger('aioquic').setLevel(logging.ERROR)
 
-    # Suppress specific asyncio socket warnings
-    asyncio_logger = logging.getLogger('asyncio')
-    asyncio_logger.setLevel(logging.WARNING)
-    asyncio_logger.addFilter(SocketSendFilter())
+    # Suppress asyncio socket warnings
+    logging.getLogger('asyncio').setLevel(logging.ERROR)
 
 
 # Default scanner settings
