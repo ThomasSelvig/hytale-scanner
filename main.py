@@ -6,6 +6,10 @@ from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.connection import QuicConnection
 from aioquic.quic.events import ConnectionTerminated, HandshakeCompleted
 
+# found in wireshark in initial "Client Hello" from client to server
+# under QUIC IETF/CRYPTO/TLSv1.3/Handshake/Extension: application_layer_protocol_negotiation
+ALPN = "hytale/1"
+
 
 class QuicProbe(QuicConnectionProtocol):
     def __init__(self, *args, **kwargs):
@@ -27,7 +31,7 @@ async def scan_quic_server(ip: str, port: int = 5520, timeout: float = 1.0) -> b
     """
     configuration = QuicConfiguration(
         is_client=True,
-        alpn_protocols=["hytale/1"],
+        alpn_protocols=[ALPN],
         server_name=ip,  # Use IP as SNI
     )
     configuration.verify_mode = ssl.CERT_NONE
