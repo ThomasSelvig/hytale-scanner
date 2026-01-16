@@ -1,1 +1,0 @@
-I am trying to make a "server pinger" for a new game that came out called Hytale. Inspecting the network traffic shows that wireshark determined that the server is immediately initiating a "QUIC" handshake. How can I make a program to "ping" a server on UDP port 5520 running a QUIC protocol? Please provide python code
