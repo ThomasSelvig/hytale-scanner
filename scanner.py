@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import logging
 import signal
 from typing import List
 
@@ -13,7 +14,10 @@ from config import (
     DEFAULT_PORT,
     PROGRESS_FILE,
     RESULTS_FILE,
+    setup_logging,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class Scanner:
@@ -54,7 +58,7 @@ class Scanner:
         # Initialize coordinator and load progress
         self.coordinator = BlockClaimCoordinator(PROGRESS_FILE, RESULTS_FILE)
         await self.coordinator.load_progress()
-        print(f"Loaded {len(self.coordinator.consumed_blocks)} consumed blocks")
+        logger.info("Loaded %d consumed blocks", len(self.coordinator.consumed_blocks))
 
         # Create generator
         generator = IPBlockGenerator(block_size_bits=self.block_size)
@@ -75,21 +79,21 @@ class Scanner:
             task = asyncio.create_task(worker.run())
             self.worker_tasks.append(task)
 
-        print(f"Started {self.num_workers} workers with {self.concurrency} concurrent scans each")
-        print(f"Scanning UDP port {self.port} for Hytale servers...")
-        print(f"Press Ctrl+C to gracefully shutdown (finish current blocks)")
-        print(f"Press Ctrl+C twice to force shutdown\n")
+        logger.info("Started %d workers with %d concurrent scans each", self.num_workers, self.concurrency)
+        logger.info("Scanning UDP port %d for Hytale servers", self.port)
+        logger.info("Press Ctrl+C to gracefully shutdown (finish current blocks)")
+        logger.info("Press Ctrl+C twice to force shutdown")
 
         # Wait for all workers to complete
         await asyncio.gather(*self.worker_tasks, return_exceptions=True)
-        print("\nAll workers completed")
-        print(f"Total blocks consumed: {len(self.coordinator.consumed_blocks)}")
+        logger.info("All workers completed")
+        logger.info("Total blocks consumed: %d", len(self.coordinator.consumed_blocks))
 
     def _signal_handler_sync(self) -> None:
         """Handle SIGINT signals (called from signal handler context)."""
         if self.shutdown_requested.is_set():
             # Second SIGINT - force immediate shutdown
-            print("\n[FORCE SHUTDOWN] Canceling in-flight scans...")
+            logger.warning("FORCE SHUTDOWN: Canceling in-flight scans")
             self.force_shutdown.set()
 
             # Cancel all worker tasks
@@ -98,7 +102,7 @@ class Scanner:
                     task.cancel()
         else:
             # First SIGINT - graceful shutdown
-            print("\n[GRACEFUL SHUTDOWN] Finishing current blocks... (Ctrl+C again to force)")
+            logger.warning("GRACEFUL SHUTDOWN: Finishing current blocks (Ctrl+C again to force)")
             self.shutdown_requested.set()
 
 
@@ -138,6 +142,10 @@ def parse_args():
 async def main():
     """Main entry point."""
     args = parse_args()
+
+    # Setup logging
+    setup_logging()
+
     scanner = Scanner(
         num_workers=args.workers,
         concurrency=args.concurrency,

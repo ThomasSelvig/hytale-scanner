@@ -1,11 +1,14 @@
 import asyncio
 import ipaddress
+import logging
 from typing import Optional
 
 from block_generator import IPBlockGenerator
 from coordinator import BlockClaimCoordinator
-from scanner_core import scan_ip_two_phase
+from scanner_core import scan_ip
 from config import MAX_CLAIM_ATTEMPTS
+
+logger = logging.getLogger(__name__)
 
 
 class Worker:
@@ -51,20 +54,20 @@ class Worker:
                 break  # No more unclaimed blocks or shutdown requested
 
             self.current_block = block
-            print(f"[Worker {self.worker_id}] Scanning block {block}")
+            logger.info("Worker %d scanning block %s", self.worker_id, block)
 
             try:
                 await self.scan_block(block)
-                print(f"[Worker {self.worker_id}] Completed block {block}")
+                logger.info("Worker %d completed block %s", self.worker_id, block)
             except asyncio.CancelledError:
                 if self.force_shutdown_event.is_set():
-                    print(f"[Worker {self.worker_id}] Force shutdown - block {block} marked consumed")
+                    logger.warning("Worker %d force shutdown - block %s marked consumed", self.worker_id, block)
                     break
                 raise
             finally:
                 self.current_block = None
 
-        print(f"[Worker {self.worker_id}] Exiting")
+        logger.info("Worker %d exiting", self.worker_id)
 
     async def _claim_unclaimed_block(self) -> Optional[ipaddress.IPv4Network]:
         """
@@ -83,7 +86,7 @@ class Worker:
                 return candidate
 
         # Max attempts exceeded - likely near 100% coverage
-        print(f"[Worker {self.worker_id}] Could not find unclaimed block after {MAX_CLAIM_ATTEMPTS} attempts")
+        logger.warning("Worker %d could not find unclaimed block after %d attempts", self.worker_id, MAX_CLAIM_ATTEMPTS)
         return None
 
     async def scan_block(self, block: ipaddress.IPv4Network) -> None:
@@ -123,4 +126,4 @@ class Worker:
             semaphore: Semaphore for limiting concurrency
         """
         async with semaphore:
-            await scan_ip_two_phase(ip, self.port, self.coordinator)
+            await scan_ip(ip, self.port, self.coordinator)

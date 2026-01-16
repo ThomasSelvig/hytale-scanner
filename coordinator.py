@@ -10,7 +10,7 @@ from config import PROGRESS_FILE, RESULTS_FILE
 class BlockClaimCoordinator:
     """Coordinates block claims across workers using file-based locking."""
 
-    def __init__(self, progress_file: str = PROGRESS_FILE, results_file: str = RESULTS_FILE):
+    def __init__(self, progress_file: str = PROGRESS_FILE, results_file: str = RESULTS_FILE) -> None:
         """
         Initialize coordinator.
 
@@ -91,6 +91,3 @@ class BlockClaimCoordinator:
                 f.write(f'{ip}\n')
                 f.flush()
                 os.fsync(f.fileno())
-
-            # Print to console
-            print(f"[FOUND] {ip} - {phase}")

@@ -1,4 +1,41 @@
 import ipaddress
+import logging
+
+
+class SocketSendFilter(logging.Filter):
+    """Filter to suppress noisy socket and connection warnings."""
+    def filter(self, record):
+        msg = record.getMessage()
+        return not any([
+            'socket.send() raised exception' in msg,
+            'Connection close sent' in msg,
+        ])
+
+
+def setup_logging(level: int = logging.INFO) -> None:
+    """
+    Setup structured logging for the scanner.
+
+    Args:
+        level: Logging level (default: INFO)
+    """
+    # Configure root logger
+    logging.basicConfig(
+        format='%(asctime)s [%(levelname)s] %(message)s',
+        level=level,
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+    # Silence noisy third-party libraries
+    # The aioquic library uses logger name "quic" (not "aioquic")
+    logging.getLogger('quic').setLevel(logging.ERROR)
+    logging.getLogger('aioquic').setLevel(logging.ERROR)
+
+    # Suppress specific asyncio socket warnings
+    asyncio_logger = logging.getLogger('asyncio')
+    asyncio_logger.setLevel(logging.WARNING)
+    asyncio_logger.addFilter(SocketSendFilter())
+
 
 # Default scanner settings
 DEFAULT_PORT = 5520
@@ -7,15 +44,25 @@ DEFAULT_CONCURRENCY = 100
 DEFAULT_BLOCK_SIZE_BITS = 24  # /24 = 256 IPs
 
 # Timeout values
-UDP_CHECK_TIMEOUT = 0.5  # Fast UDP port check
-QUIC_HANDSHAKE_TIMEOUT = 1.0  # Full QUIC handshake
+# UDP check timeout (no longer used - kept for reference)
+UDP_CHECK_TIMEOUT = 0.5
+
+# QUIC handshake timeout
+# Tuned based on testing: 1s catches slow servers without excessive wait.
+# Shorter timeouts miss legitimate servers, longer timeouts slow down scanning.
+QUIC_HANDSHAKE_TIMEOUT = 1.0
 
 # File paths
 PROGRESS_FILE = "progress.txt"
 RESULTS_FILE = "found.txt"
 
 # Block claim settings
-MAX_CLAIM_ATTEMPTS = 1000  # Max attempts to find unclaimed block
+# Maximum attempts to find unclaimed block before giving up.
+# At 99% coverage, expected attempts ≈ 100. At 99.9% coverage ≈ 1000.
+# This threshold assumes near-complete scan before worker stops.
+# If workers stop early, consider increasing this value or implementing
+# deterministic block allocation at high coverage levels.
+MAX_CLAIM_ATTEMPTS = 1000
 
 # IP ranges to skip (private/reserved)
 SKIP_RANGES = [
